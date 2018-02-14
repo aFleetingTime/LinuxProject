@@ -1,5 +1,0 @@
-'-isystem','/usr/include/clang/4.0.1/include',
-'-isystem','/usr/local/include',
-'-isystem','/usr/include/x86_64-linux-gnu',
-'-isystem','/usr/include',
-'-isystem','/usr/lib/gcc/x86_64-linux-gnu/4.8/include',
