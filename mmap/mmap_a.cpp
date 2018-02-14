@@ -24,11 +24,12 @@ int main()
 	}
 	for(int i = 0; i < mstat.st_size; ++i)
 		mptr[i] = 'b';
-	char buf[1024]{};
-	lseek(fd, 0, SEEK_SET);
-	read(fd, buf, 1023);
-	cout << buf << endl;
-	munmap(mptr, mstat.st_size);
+	cout << mptr << endl;
+	if(munmap(mptr, mstat.st_size))
+	{
+		perror("munmap");
+		return 0;
+	}
 	close(fd);
 	return 0;
 }
