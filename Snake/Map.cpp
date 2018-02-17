@@ -10,6 +10,15 @@ Map::Map(Point point) : mSize(point)
 
 void Map::flush()
 {
+	Snake *snake = Snake::getSnake();
+	std::vector<Point> health = snake->getHealth();
+	for(auto beg = health.begin(); beg != health.end(); ++beg)
+		mMap[beg->getX()][beg->getY()] = SNAKE;
+	print();
+}
+
+void Map::print()
+{
 	system("clear");
 	std::ostringstream oss;
 	for(auto beg = mMap.begin(); beg != mMap.end(); ++beg)

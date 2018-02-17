@@ -11,6 +11,7 @@ public:
 
 private:
 	Point mSize;
+	void print();
 	std::vector<std::vector<Stumb>> mMap;
 	void initMap();
 };

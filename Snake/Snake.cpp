@@ -1,19 +1,33 @@
 #include "Snake.h"
 
-Snake::Snake(Point point, size_t len) : mLen(len), mWay(RIGHT)
+Snake::Snake() : mLen(0)
 {
-	int x = point.getX() / 2;
-	int y = point.getY() / 2;
-	for(size_t i = 0; i < mLen; ++i)
-	{
-		mHealth.push_back(Point(x++, y++));
-	}
+
 }
 
-void Snake::move(Way way)
+Snake *Snake::mSnake = nullptr;
+
+Snake *Snake::getSnake()
+{
+	if(mSnake == nullptr)
+		mSnake = new Snake;
+	return mSnake;
+}
+
+Way Snake::getWay()
+{
+	return mWay;
+}
+
+void Snake::setWay(Way way)
+{
+	mWay = way;
+}
+
+void Snake::move()
 {
 	back();
-	switch(way)
+	switch(mWay)
 	{
 		case UP:
 			mHealth.front().setY(-1);
@@ -45,9 +59,13 @@ void Snake::resize(Point point, size_t len)
 	mHealth.resize(0);
 	int x = point.getX() / 2;
 	int y = point.getY() / 2;
-	for(size_t i = 0; i < mLen; ++i)
+	for(size_t i = 0; i < mLen && x >= 0 && y >= 0; ++i)
 	{
-		mHealth.push_back(Point(x++, y++));
+		mHealth.push_back(Point(x, y--));
 	}
 }
 
+std::vector<Point> Snake::getHealth()
+{
+	return mHealth;
+}
