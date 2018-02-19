@@ -21,8 +21,8 @@ void producerRun()
 		unique_lock<mutex> ulock(mlock);
 		food.push(foodname);
 		cout << "生产者生产" << foodname << " 物品还剩:" << food.size() << endl;
-		cond.notify_one();
 		ulock.unlock();
+		cond.notify_one();
 		this_thread::sleep_for(pSleepTime);
 	}
 }
