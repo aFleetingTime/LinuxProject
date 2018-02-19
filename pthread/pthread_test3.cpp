@@ -10,7 +10,6 @@ using namespace std;
 
 int num = 0;
 pthread_mutex_t mutex{};
-bool mylock = false;
 
 void *addNum_lock(void *arg)
 {
@@ -37,5 +36,7 @@ int main()
 
 	for(int i = 0; i < 2; ++i)
 		pthread_join(pts[i], nullptr);
+
+	pthread_mutex_destroy(&mutex);
 	pthread_exit(nullptr);
 }
