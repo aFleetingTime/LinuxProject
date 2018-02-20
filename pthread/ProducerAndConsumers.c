@@ -48,6 +48,7 @@ void *Consumers(void *arg)
 	while(1)
 	{
 		pthread_mutex_lock(&mutex);
+
 		if(!foodHead.foodNum)
 			pthread_cond_wait(&cond, &mutex);
 
