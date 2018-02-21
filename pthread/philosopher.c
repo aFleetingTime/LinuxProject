@@ -19,7 +19,6 @@ typedef struct philosopherInfo
 	size_t phiTotal;
 	int pNum;
 	int isLast;
-	struct timespec time;
 }PhilosopherInfo;
 
 #define NUM 5
@@ -89,8 +88,6 @@ int main()
 		temp->phiTotal = NUM;
 		temp->pNum = i;
 		temp->isLast = (i == NUM - 1) ? 1 : 0;
-		temp->time.tv_sec = 1;
-		temp->time.tv_nsec = 0;
 		pthread_create(&pInfo[i].mTID, NULL, repast, (void*)temp);
 	}
 	int *num = NULL;
