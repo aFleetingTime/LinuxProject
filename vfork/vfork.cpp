@@ -51,13 +51,77 @@ string getCmd(array<char, bufSize> &cmdBuf)
 	return tempCmd;
 }
 
+int findPipe(int args, const char * const *argv)
+{
+	for(int i = 0; i < args; ++i)
+	{
+		if(!strcmp(argv[i], "|") || !strcmp(argv[i], "<") || !strcmp(argv[i], ">"))
+			return i;
+	}
+	return -1;
+}
+
 void exec(int args, char **argv)
 {
+	int index = 0, cur = findPipe(args, argv);
+	char flag = '\0';
+	int pfd[2]{};
+	pipe(pfd);
 	if(!vfork())
 	{
-		execvp(*argv, argv);
-		perror("shell");
+		if(cur != -1)
+		{
+			delete argv[cur];
+			argv[cur++] = nullptr;
+			for(index = cur; index < args; ++index)
+			{
+				if(!strcmp(argv[index], "|") || !strcmp(argv[index], "<") || !strcmp(argv[index], ">"))
+				{
+					flag = *argv[index];
+					delete argv[index];
+					argv[index] = nullptr;
+					if(argv[cur] == nullptr)
+						goto CONTINUE;
+					if(!vfork())
+					{
+						switch(flag)
+						{
+						case '|':
+							dup2(pfd[0], STDIN_FILENO);
+							break;
+						case '<':
+							break;
+						case '>':
+							break;
+						}
+						execvp(argv[cur], argv + cur);
+						perror("shell");
+						return;
+					}
+CONTINUE:
+					cur = index + 1;
+				}
+			}
+			if(cur < args && !vfork())
+			{
+				dup2(pfd[0], STDIN_FILENO);
+				close(pfd[1]);
+				execvp(argv[cur], argv + cur);
+				perror("shell");
+				return;
+			}
+			dup2(pfd[1], STDOUT_FILENO);
+			close(pfd[0]);
+			execvp(*argv, argv);
+			perror("shell");
+			return;
+		}
+		else
+			execvp(*argv, argv);
+		return;
 	}
+	close(pfd[0]);
+	close(pfd[1]);
 	while(wait(nullptr) != -1);
 }
 
@@ -77,12 +141,15 @@ int main()
 	array<char, cmdSize> hostName{};
 	while(true)
 	{
+		memset(cmdBuf.data(), 0, bufSize);
 		gethostname(hostName.data(), hostName.size());
 		cout << getlogin() << '@' << hostName.data() << ':' << get_current_dir_name() << "$ ";
-		memset(cmdBuf.data(), 0, bufSize);
 		size_t args = 0;
 		char **argv = getArg(getCmd(cmdBuf), args);
-		exec(args, argv);
+		if(!strcmp(*argv, "cd"))
+			chdir(argv[1]);
+		else
+			exec(args, argv);
 		freeArg(argv, args);
 	}
 	return 0;
