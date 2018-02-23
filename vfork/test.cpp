@@ -13,10 +13,12 @@ using namespace std;
 int main()
 {
 	char *a[5]{};
-	a[0] = "ls";
+	a[0] = "grep";
+	a[1] = "a";
+	dup2(4, 0);
 	if(!vfork())
 	{
-		execvp("ls", a);
+		execvp("grep", a);
 		perror("vfork");
 	}
 	return 0;
