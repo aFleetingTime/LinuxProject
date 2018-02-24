@@ -24,12 +24,49 @@ public:
 	{
 		outflag = false;
 		inflag = false;
+		index = 0;
+		tarFlag = 0;
+	}
+	~Cmd()
+	{
+		for(int i = 0; i < index; ++i)
+		{
+			if(argv[i] != nullptr)
+				delete[] argv[i];
+			argv[i] = nullptr;
+		}
+		index = 0;
+	}
+	bool addArg(const string &arg)
+	{
+		if(index >= cmdSize)
+			return false;
+		argv[index] = new char[arg.length() + 1];
+		strcpy(argv[index++], arg.c_str());
+		return true;
+	}
+	void freeArg()
+	{
+		for(int i = 0; i < index; ++i)
+		{
+			if(argv[i] != nullptr)
+			{
+				cout << "free" << endl;
+				delete[] argv[i];
+			}
+			argv[i] = nullptr;
+		}
+		index = 0;
 	}
 	static size_t args;
 	char *argv[cmdSize];
 	bool outflag;
 	bool inflag;
 	string target;
+	char tarFlag;
+
+private:
+	size_t index;
 };
 size_t Cmd::args = 0;
 
@@ -38,8 +75,9 @@ void freeArg(Cmd *);
 Cmd* getArg(string cmd)
 {
 	char errorChar = cmd.front();
-	int count = 0;
-	int findIndex = 0, aindex = 0, cindex = 0;
+	int findIndex = 0, index = 0;
+	int pipeflag = 0;
+	int dupflag = 0;
 	Cmd *cmds = new Cmd[cmdSize];
 	if(errorChar == '|' || errorChar == '<' || errorChar == '>')
 	{
@@ -51,58 +89,78 @@ Error:
 		return nullptr;
 	}
 	string temp;
-	while(cindex < cmdSize && (findIndex = cmd.find(" ")) != string::npos)
+	while(index < cmdSize && (findIndex = cmd.find(" ")) != string::npos)
 	{
 		temp = cmd.substr(0, findIndex);
-		int flag = 0;
-		if((!temp.compare("|") ? flag = 1 : 0) || (!temp.compare("<") ? flag = 2 : 0) || (!temp.compare(">") ? flag = 3 : 0))
+		if((temp.compare("|"))
 		{
-			switch(flag)
-			{
-			case 1:
-				cmds[cindex].outflag = true;
-				cmds[++cindex].inflag = true;
-				break;
-			case 2:
-
-				break;
-			case 3:
-				cmds[cindex].outflag = true;
-				cmd.erase(0, findIndex + 1);
-				findIndex = cmd.find(" ");
-				cmds[cindex].target = cmd.substr(0, findIndex);
-				break;
-			}
-			aindex = 0;
-			//++count;
+			cmds[index].outflag = true;
+			cmds[++index].inflag = true;
+			dupflag = 0
+			++pipeflag;
 			goto WCONTINUE;
 		}
-		else if(count != 0)
-			--count;
-		cmds[cindex].argv[aindex] = new char[temp.length() + 1];
-		strcpy(cmds[cindex].argv[aindex++], temp.c_str());
+		else if(!temp.compare("<") || !temp.compare(">"))
+		{
+			cmds[index].tarFlag = temp.front():
+			if(cmds[index].tarFlag == '<')
+			{
+				cmds[index].inflag = true;
+				cmd.erase(0, findIndex + 1);
+				findIndex = cmd.find(" ");
+				cmds[index++].target = cmd.substr(0, findIndex);
+			}
+			else
+			{
+				cmds[index].outflag = true;
+				cmd.erase(0, findIndex + 1);
+				findIndex = cmd.find(" ");
+				cmds[index++].target = cmd.substr(0, findIndex);
+			}
+			pipeflag = 0;
+			++dupflag;
+		}
+		cmds[cindex].addArg(temp);
 WCONTINUE:
 		cmd.erase(0, findIndex + 1);
-		aindex %= cmdSize;
-		if(count == 2)
+		if(pipeflag == 2 || dupflag == 2)
 		{
 			errorChar = temp.front();
 			goto Error;
 		}
 	}
-	if(!temp.compare("|") || !temp.compare("<") || !temp.compare(">"))
+	if(!cmd.empty())
 	{
-		if(++count == 2)
+		if(!cmd.compare("|"))
 		{
-			errorChar = temp.front();
-			goto Error;
+			if(++pipeflag == 2)
+			{
+				errorChar = temp.front();
+				goto Error;
+			}
+			cmds[cindex].outflag = true;
+			cmds[++cindex].inflag = true;
 		}
-		cmds[cindex].outflag = true;
-		cmds[++cindex].inflag = true;
+		else if(!cmd.compare("<") || !cmd.compare(">"))
+		{
+			if(++dupflag == 2)
+			{
+				errorChar = temp.front();
+				goto Error;
+			}
+			cmds[index].tarFlag = cmd.front();
+			if(cmds[index].tarFlag == '<')
+			{
+
+			}
+			else if(cmds[index].tarFlag == '>')
+			{
+
+			}
+		}
+		cmds[cindex].addArg(cmd);
+		Cmd::args = cindex;
 	}
-	cmds[cindex].argv[aindex] = new char[cmd.length() + 1];
-	strcpy(cmds[cindex++].argv[aindex], cmd.c_str());
-	Cmd::args = cindex;
 	return cmds;
 }
 
@@ -167,16 +225,6 @@ void exec(Cmd *argv)
 
 void freeArg(Cmd *argv)
 {
-	if(argv == nullptr)
-		return;
-	for(int i = 0; i < Cmd::args; ++i)
-	{
-		for(int j = 0; i < cmdSize; ++i)
-		{
-			if(argv[i].argv[j])
-				delete[] argv[i].argv[j];
-		}
-	}
 	delete[] argv;
 	Cmd::args = 0;
 }
