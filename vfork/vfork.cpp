@@ -50,10 +50,7 @@ public:
 		for(int i = 0; i < index; ++i)
 		{
 			if(argv[i] != nullptr)
-			{
-				cout << "free" << endl;
 				delete[] argv[i];
-			}
 			argv[i] = nullptr;
 		}
 		index = 0;
@@ -74,16 +71,17 @@ void freeArg(Cmd *);
 
 Cmd* getArg(string cmd)
 {
+	cmd.push_back(' ');
 	char errorChar = cmd.front();
 	int findIndex = 0, index = 0;
 	int pipeflag = 0;
-	int dupflag = 0;
+	int dupflag = -2;
 	Cmd *cmds = new Cmd[cmdSize];
 	if(errorChar == '|' || errorChar == '<' || errorChar == '>')
 	{
 Error:
 		cout << "-bash: 未预期的符号" << '\'' << errorChar << '\'' << "附近有语法错误" << endl;
-		Cmd::args = cindex + 1;
+		Cmd::args = index + 1;
 		freeArg(cmds);
 		Cmd::args = 0;
 		return nullptr;
@@ -92,75 +90,64 @@ Error:
 	while(index < cmdSize && (findIndex = cmd.find(" ")) != string::npos)
 	{
 		temp = cmd.substr(0, findIndex);
-		if((temp.compare("|"))
+		if(!temp.compare("|"))
 		{
 			cmds[index].outflag = true;
 			cmds[++index].inflag = true;
-			dupflag = 0
 			++pipeflag;
-			goto WCONTINUE;
 		}
 		else if(!temp.compare("<") || !temp.compare(">"))
 		{
-			cmds[index].tarFlag = temp.front():
+			cmds[index].tarFlag = temp.front();
 			if(cmds[index].tarFlag == '<')
-			{
 				cmds[index].inflag = true;
-				cmd.erase(0, findIndex + 1);
-				findIndex = cmd.find(" ");
-				cmds[index++].target = cmd.substr(0, findIndex);
+			else
+				cmds[index].outflag = true;
+			cmd.erase(0, findIndex + 1);
+			findIndex = cmd.find(" ");
+			if(findIndex == string::npos)
+			{
+				if(cmd == "<" || cmd == ">")
+				{
+					errorChar = temp.front();
+					goto Error;
+				}
+				cmds[index++].target = cmd;
+				cmd.clear();
+				break;
 			}
 			else
 			{
-				cmds[index].outflag = true;
-				cmd.erase(0, findIndex + 1);
-				findIndex = cmd.find(" ");
-				cmds[index++].target = cmd.substr(0, findIndex);
+				cmds[index].target = cmd.substr(0, findIndex);
+				if(cmds[index].target == "<" || cmds[index].target == ">")
+				{
+					errorChar = temp.front();
+					goto Error;
+				}
+				++index;
 			}
 			pipeflag = 0;
-			++dupflag;
+			if(dupflag == index - 1)
+			{
+				errorChar = temp.front();
+				goto Error;
+			}
+			dupflag = index--;
 		}
-		cmds[cindex].addArg(temp);
-WCONTINUE:
-		cmd.erase(0, findIndex + 1);
-		if(pipeflag == 2 || dupflag == 2)
+		else
 		{
+			cmds[index].addArg(temp);
+			pipeflag = 0;
+		}
+		cmd.erase(0, findIndex + 1);
+		if(pipeflag == 2)
+		{
+			cout << "pipe" << endl;
 			errorChar = temp.front();
 			goto Error;
 		}
 	}
-	if(!cmd.empty())
-	{
-		if(!cmd.compare("|"))
-		{
-			if(++pipeflag == 2)
-			{
-				errorChar = temp.front();
-				goto Error;
-			}
-			cmds[cindex].outflag = true;
-			cmds[++cindex].inflag = true;
-		}
-		else if(!cmd.compare("<") || !cmd.compare(">"))
-		{
-			if(++dupflag == 2)
-			{
-				errorChar = temp.front();
-				goto Error;
-			}
-			cmds[index].tarFlag = cmd.front();
-			if(cmds[index].tarFlag == '<')
-			{
-
-			}
-			else if(cmds[index].tarFlag == '>')
-			{
-
-			}
-		}
-		cmds[cindex].addArg(cmd);
-		Cmd::args = cindex;
-	}
+	Cmd::args = ++index;
 	return cmds;
 }
 
@@ -185,6 +172,23 @@ void creatExec(Cmd *arg, int index, bool flag)
 {
 	if(index == Cmd::args - 1)
 	{
+		if(!arg[index].target.empty())
+		{
+			int fd = 0;
+			int stdioNo;
+			if(arg[index].tarFlag == '<')
+			{
+				fd = open(arg[index].target.c_str(), O_RDONLY, 0664);
+				stdioNo = STDIN_FILENO;
+			}
+			else
+			{
+				fd = open(arg[index].target.c_str(), O_WRONLY | O_CREAT, 0664);
+				stdioNo = STDOUT_FILENO;
+			}
+			dup2(fd, stdioNo);
+			close(fd);
+		}
 		execvp(arg[index].argv[0], arg[index].argv);
 		perror("bash");
 		return;
@@ -194,22 +198,43 @@ void creatExec(Cmd *arg, int index, bool flag)
 	if(!fork())
 	{
 		if(arg[index].target.empty())
+		{
 			dup2(pfd[1], STDOUT_FILENO);
+			close(pfd[0]);
+			close(pfd[1]);
+		}
 		else
 		{
-			int fd = open(arg[index].target.c_str(), O_WRONLY | O_CREAT, 0664);
-			dup2(fd, STDOUT_FILENO);
+			int fd = 0;
+			int stdioNo = 0;
+			if(arg[index].tarFlag == '<')
+			{
+				fd = open(arg[index].target.c_str(), O_RDONLY, 0664);
+				stdioNo = STDIN_FILENO;
+			}
+			else
+			{
+				fd = open(arg[index].target.c_str(), O_WRONLY | O_CREAT, 0664);
+				stdioNo = STDOUT_FILENO;
+			}
+			if(fd == -1)
+			{
+				perror("open file");
+				return;
+			}
+			dup2(fd, stdioNo);
 			close(fd);
 		}
-		close(pfd[0]);
-		close(pfd[1]);
 		execvp(arg[index].argv[0], arg[index].argv);
 		perror("bash");
 		return;
 	}
-	dup2(pfd[0], STDIN_FILENO);
-	close(pfd[0]);
-	close(pfd[1]);
+	if(pfd[0] != 0 && pfd[1] != 0)
+	{
+		dup2(pfd[0], STDIN_FILENO);
+		close(pfd[0]);
+		close(pfd[1]);
+	}
 	creatExec(arg, index + 1, flag);
 }
 
