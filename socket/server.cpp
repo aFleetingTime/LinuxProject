@@ -38,6 +38,13 @@ public:
 		}
 	}
 
+	~Server()
+	{
+		if(mSfd != -1)
+			close(mSfd);
+		if(clientSfd != -1)
+			close(clientSfd);
+	}
 	
 	int initServer(const sa_family_t family, const int type, const int protocol, const string ip, const uint16_t port, const int backlog)
 	{
@@ -83,7 +90,9 @@ public:
 			perror("accept");
 			return false;
 		}
-		cout << "收到请求：\n" << "客户端IP - " << ntohl(clientAddr.sin_addr.s_addr) << endl;
+		char tempBuf[16]{};
+		inet_ntop(AF_INET, reinterpret_cast<void*>(&clientAddr.sin_addr), tempBuf, 16);
+		cout << "收到请求：\n" << "客户端IP - " << tempBuf << endl;
 		return true;
 	}
 
@@ -115,7 +124,6 @@ public:
 		return ret;
 	}
 
-
 private:
 	int mSfd;
 	int clientSfd;
@@ -130,7 +138,10 @@ size_t toUpperAll(char *data, const size_t size)
 {
 	int i = 0;
 	while(i < size)
-		data[i] = toupper(data[i++]);
+	{
+		data[i] = toupper(data[i]);
+		++i;
+	}
 	return i;
 }
 
@@ -139,6 +150,16 @@ int main()
 	Server server(AF_INET, SOCK_STREAM, 0, "", POST, 128);
 	constexpr size_t bufSize = BUFSIZ;
 	char dataBuf[bufSize]{};
+
+	server.serverAccept();
+	while(true)
+	{
+		ssize_t dataSize = server.readData(dataBuf, bufSize);
+		toUpperAll(dataBuf, dataSize);
+		dataSize = server.writeData(dataBuf, dataSize);
+		cout << "转换并发送" << dataSize << "字节数据" << endl;
+	}
+#if 0
 	while(server.serverAccept())
 	{
 		ssize_t dataSize = server.readData(dataBuf, bufSize);
@@ -146,5 +167,6 @@ int main()
 		dataSize = server.writeData(dataBuf, dataSize);
 		cout << "转换并发送" << dataSize << "字节数据" << endl;
 	}
+#endif
 	return 0;
 }
