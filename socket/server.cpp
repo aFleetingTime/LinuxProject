@@ -91,7 +91,7 @@ public:
 			return false;
 		}
 		char tempBuf[16]{};
-		inet_ntop(AF_INET, reinterpret_cast<void*>(&clientAddr.sin_addr), tempBuf, 16);
+		inet_ntop(AF_INET, reinterpret_cast<void*>(&clientAddr.sin_addr.s_addr), tempBuf, 16);
 		cout << "收到请求：\n" << "客户端IP - " << tempBuf << endl;
 		return true;
 	}
@@ -151,14 +151,20 @@ int main()
 	constexpr size_t bufSize = BUFSIZ;
 	char dataBuf[bufSize]{};
 
+	cout << "服务器已启动..." << endl;
+
 	server.serverAccept();
 	while(true)
 	{
 		ssize_t dataSize = server.readData(dataBuf, bufSize);
 		toUpperAll(dataBuf, dataSize);
 		dataSize = server.writeData(dataBuf, dataSize);
-		cout << "转换并发送" << dataSize << "字节数据" << endl;
+		if(dataSize == 0)
+			break;
+		cout << "状态：转换并发送" << dataSize << "字节数据" << endl;
 	}
+
+	cout << "服务器终止运行..." << endl;
 #if 0
 	while(server.serverAccept())
 	{
